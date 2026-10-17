@@ -416,7 +416,7 @@ var lastSent = 0;
     
     function nextStep() {
       stepIdx = (stepIdx + 1) % steps.length;
-      document.getElementById('step-btn').innerText = "STEP: " + stepLabels[stepIdx];
+      document.getElementById('step-btn').innerText = stepLabels[stepIdx];
       document.getElementById('step-label').innerText = stepLabels[stepIdx];
     }    
     
