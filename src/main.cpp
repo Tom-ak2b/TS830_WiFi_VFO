@@ -11,6 +11,7 @@
 
 Si5351 si5351;
 unsigned long frequency = 5500000;
+bool cwMode = true;
 const int keySensePin = 18;
 const int32_t txOffsetHz = 800; 
 
@@ -238,20 +239,19 @@ body {
     <div class="bezel-display">
       <div class="fs-zone" onclick="toggleFS()"></div>
       <div class="mem-zone" onclick="startMem()"></div>
-      <div class="reset-zone" onclick="clearAllMem()"></div>
-      
+      <div class="reset-zone" onclick="clearAllMem()"></div> 
       <div class="display" id="main-display">
-        <div class="display-info"><span id="band-label">VFO A</span><span id="step-label">100Hz</span></div>
-        <h1 id="f-display">05.500.000</h1>
-  <div class="display-footer">
-  <span id="mode-label">CW</span>
-  <div class="vfo-b-readout">
-    <span>VFO B:</span>
-    <span id="vfo-b-frequency">000.000</span>
+      <div class="display-info"><span id="band-label">VFO A</span><span id="step-label">100Hz</span></div>
+      <h1 id="f-display">05.500.000</h1>
+      <div class="display-footer">
+      <span id="mode-label">CW</span>
+      <div class="vfo-b-readout">
+      <span>VFO B:</span>
+      <span id="vfo-b-frequency">000.000</span>
   </div>
 </div>
 
-      </div>
+       </div>
     </div>
     
    <div class="freq-buttons">
@@ -299,24 +299,23 @@ body {
 
     
 
-    <div class="bezel-knob"><div id="knob"></div></div>
-    <div class="controls-container">
-  <div class="control-row group-margin">
-    <button class="btn b-mode" id="mode-btn" onclick="toggleMode()">CW</button>
-    <button class="btn b-split inactive" id="split-btn" onclick="toggleSplit()">SPLIT</button>
-    <button class="btn b-vfo" id="vfo-btn" onclick="toggleVfo()">VFO A</button>
-    <button class="btn b-step" id="step-btn" onclick="nextStep()">100Hz</button>
-  </div>
+<div class="bezel-knob"><div id="knob"></div></div>
+      <div class="controls-container">
+        <div class="control-row group-margin">
+        <button class="btn b-mode" id="mode-btn" onclick="toggleMode()">CW</button>
+        <button class="btn b-split inactive" id="split-btn" onclick="toggleSplit()">SPLIT</button>
+        <button class="btn b-vfo" id="vfo-btn" onclick="toggleVfo()">VFO A</button>
+        <button class="btn b-step" id="step-btn" onclick="nextStep()">100Hz</button>
+      </div>
 
-  <div class="grid">
-    <div class="btn b-mem" id="m1" onclick="handleMem(1)">M1</div>
-    <div class="btn b-mem" id="m2" onclick="handleMem(2)">M2</div>
-    <div class="btn b-mem" id="m3" onclick="handleMem(3)">M3</div>
-    <div class="btn b-mem" id="m4" onclick="handleMem(4)">M4</div>
-  </div>
+      <div class="grid">
+        <div class="btn b-mem" id="m1" onclick="handleMem(1)">M1</div>
+        <div class="btn b-mem" id="m2" onclick="handleMem(2)">M2</div>
+        <div class="btn b-mem" id="m3" onclick="handleMem(3)">M3</div>
+        <div class="btn b-mem" id="m4" onclick="handleMem(4)">M4</div>
+      </div>
 </div>
-
-    <div class="signature">Si5351 VFO by mircemk</div>
+        <div class="signature">Si5351 VFO by mircemk</div>
   </div>
 
   <script>
@@ -397,8 +396,16 @@ var lastSent = 0;
     }
 
     function updateMode() {
-  curMode = (freq < CW_SSB_THRESHOLD) ? "CW" : "SSB";
-}
+      document.getElementById('mode-label').innerText = curMode;
+      document.getElementById('mode-btn').innerText = curMode;
+    }
+
+    function toggleMode() {
+      curMode = (curMode === "CW") ? "SSB" : "CW";
+      updateMode();
+      sendFreq();
+    }
+
 
     
    function updateUI() {
@@ -435,8 +442,12 @@ var lastSent = 0;
 
     function sendFreq() {
       let now = Date.now();
-      if (now - lastSent > 50) { fetch('/set?f=' + freq); lastSent = now; }
+      if (now - lastSent > 50) {
+        fetch('/set?f=' + freq + '&mode=' + curMode);
+        lastSent = now;
+      }
     }
+
     function getAngle(x, y) {
       let r = document.getElementById('knob').getBoundingClientRect();
       return Math.atan2(y - (r.top + r.height/2), x - (r.left + r.width/2)) * 180 / Math.PI;
@@ -490,10 +501,10 @@ void updateFrequency(unsigned long f) {
   uint64_t outputHz = f;
 
   // Apply the TX offset only below 5.570 MHz, and only while transmitting.
-  if (f < CW_SSB_THRESHOLD_HZ &&
-      digitalRead(keySensePin) == LOW) {
-    outputHz += txOffsetHz;
-  }
+  if (cwMode && digitalRead(keySensePin) == LOW) {
+  outputHz += txOffsetHz;
+}
+
 
   // Etherkit set_freq() expects units of 0.01 Hz.
   si5351.set_freq(outputHz * 100ULL, SI5351_CLK0);
@@ -520,6 +531,11 @@ void handleSet() {
   }
 
   frequency = newFrequency;
+
+  if (server.hasArg("mode")) {
+    cwMode = (server.arg("mode") == "CW");
+  }
+
   updateFrequency(frequency);
 
   Serial.print("Frequency set to: ");
@@ -527,6 +543,7 @@ void handleSet() {
 
   server.send(200, "text/plain", "OK");
 }
+
 
 void handleSignal() {
   // Temporary test value.
@@ -547,13 +564,14 @@ void checkKeySense() {
   if (millis() - lastChange >= 30) {
     static int appliedState = HIGH;
 
-    if (state == LOW && frequency < CW_SSB_THRESHOLD_HZ) {
+   if (state == LOW && cwMode) {
   outputHz += txOffsetHz;
 }
 
+
 Serial.printf("Key sense: %s; mode: %s; VFO: %lu Hz; output: %llu Hz\n",
               state == LOW ? "TX" : "RX",
-              frequency < CW_SSB_THRESHOLD_HZ ? "CW" : "SSB",
+              cwMode ? "CW" : "SSB",
               frequency,
               outputHz);
 
