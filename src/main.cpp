@@ -10,10 +10,16 @@
 #include "config.h"
 
 Si5351 si5351;
-unsigned long frequency = 5500000;
+
 bool cwMode = true;
 const int keySensePin = 18;
 const int32_t txOffsetHz = 800; 
+unsigned long freqA = 5500000;
+unsigned long freqB = 5500000;
+char curVfo = 'A';
+bool isSplit = false;
+bool isRit = false;
+
 
 WebServer server(80);
 
@@ -123,17 +129,30 @@ const char VFO_HTML[] PROGMEM = R"rawliteral(
   .btn { border: 3px solid var(--gold-border); border-radius: 8px; color: #fff; font-weight: 900; font-size: 15px; padding: 11px 0; text-align: center; cursor: pointer; box-shadow: 3px 5px 8px #000; text-transform: uppercase; transition: transform 0.05s; }
   .btn:active { transform: translateY(2px); box-shadow: 1px 2px 4px #000; }
   
+  /* Existing styling */
+.b-mode,
+.b-split,
+.b-vfo,
+.b-rit {
+  background: var(--panel-bg);
+  border: 1px solid transparent; /* Ensure a border exists to change color */
+}
+
+/* Active states */
+.b-rit.active {
+  border: 1px solid red;
+}
+
+.b-split.active {
+  border: 1px solid red;
+}
+
+
   
   .b-step { background: var(--btn-step); font-size: 20px; padding: 12px; grid-column: span 4; }
  
   .b-mem { background: var(--btn-mem); border-color: #555; font-size: 13px; }
-    .freq-buttons {
-    width: 50%;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 6px;
-    margin-top: 8px;
-  }
+   
 
   .b-freq {
     background: var(--inner-bezel);
@@ -216,8 +235,20 @@ body {
 }
 
 .freq-buttons {
-  width: 50%;
+  width: 94%;
+  display: grid;
+  grid-template-columns: 1fr 1.4fr 1fr;
+  gap: 6px;
+  margin-top: 8px;
 }
+
+ .b-step {
+  grid-column: auto;
+  font-size: clamp(12px, 4vw, 20px);
+  padding: 10px 2px;
+}
+
+
 
 @media (max-height: 700px) {
   .bezel-display {
@@ -239,7 +270,7 @@ body {
     <div class="bezel-display">
       <div class="fs-zone" onclick="toggleFS()"></div>
       <div class="mem-zone" onclick="startMem()"></div>
-      <div class="reset-zone" onclick="clearAllMem()"></div> 
+      
       <div class="display" id="main-display">
       <div class="display-info"><span id="band-label">VFO A</span><span id="step-label">100Hz</span></div>
       <h1 id="f-display">05.500.000</h1>
@@ -253,14 +284,15 @@ body {
 
        </div>
     </div>
-    
-   <div class="freq-buttons">
+  <div class="freq-buttons">
   <button class="btn b-freq"
           onpointerdown="startAdjustFreq(-1, event)"
           onpointerup="stopAdjustFreq()"
           onpointerleave="stopAdjustFreq()"
           onpointercancel="stopAdjustFreq()"
           oncontextmenu="return false">&lt;</button>
+
+  <button class="btn b-freq b-step" id="step-btn" onclick="nextStep()">100Hz</button>
 
   <button class="btn b-freq"
           onpointerdown="startAdjustFreq(1, event)"
@@ -270,9 +302,27 @@ body {
           oncontextmenu="return false">&gt;</button>
 </div>
 
+  
+
+
 <script>
+
   let freqAdjustTimer = null;
   let freqAdjustDirection = 0;
+  let freqA = 5500000;
+  let freqB = 5500000;
+  let curVfo = 'A';
+  let isSplit = false;
+  let isRit = false;
+
+  function getCurrentFreq() {
+  return curVfo === 'A' ? freqA : freqB;
+}
+
+function setCurrentFreq(value) {
+  if (curVfo === 'A') freqA = value;
+  else freqB = value;
+}
 
   function startAdjustFreq(direction, event) {
     event.preventDefault();
@@ -286,7 +336,43 @@ body {
       adjustFreq(freqAdjustDirection);
     }, 150);
   }
+// Example State Management
+let state = {
+    ritActive: false,
+    splitActive: false,
+    vfoBFreq: 14000000, // Example frequency in Hz
+    cwMode: false,
+    pttPin: 18
+};
 
+// UI Interaction Functions
+
+function copyAToB() {
+  freqB = freqA;
+  updateUI();
+  sendFreq();
+
+  const button = document.getElementById('copy-btn');
+  button.classList.add('active');
+  setTimeout(() => button.classList.remove('active'), 200);
+}
+
+
+function toggleSplit() {
+  isSplit = !isSplit;
+  sendFreq();
+  document.getElementById('split-btn')
+    .classList.toggle('active', isSplit);
+}
+
+
+
+function toggleVfo() {
+  curVfo = (curVfo === 'A') ? 'B' : 'A';
+  document.getElementById('vfo-btn').innerText = 'VFO ' + curVfo;
+  updateUI();
+  sendFreq();
+}
   function stopAdjustFreq() {
     if (freqAdjustTimer !== null) {
       clearInterval(freqAdjustTimer);
@@ -301,12 +387,13 @@ body {
 
 <div class="bezel-knob"><div id="knob"></div></div>
       <div class="controls-container">
-        <div class="control-row group-margin">
-        <button class="btn b-mode" id="mode-btn" onclick="toggleMode()">CW</button>
-        <button class="btn b-split inactive" id="split-btn" onclick="toggleSplit()">SPLIT</button>
-        <button class="btn b-vfo" id="vfo-btn" onclick="toggleVfo()">VFO A</button>
-        <button class="btn b-step" id="step-btn" onclick="nextStep()">100Hz</button>
-      </div>
+      <div class="control-row group-margin">
+      <button class="btn b-mode" id="mode-btn" onclick="toggleMode()">CW</button>
+      <button class="btn b-split" id="split-btn" onclick="toggleSplit()">SPLIT</button>
+      <button class="btn b-vfo" id="vfo-btn" onclick="toggleVfo()">VFO A</button>
+      <button class="btn b-rit" id="copy-btn" onclick="copyAToB()">A = B</button>
+</div>
+
 
       <div class="grid">
         <div class="btn b-mem" id="m1" onclick="handleMem(1)">M1</div>
@@ -365,29 +452,27 @@ var lastSent = 0;
     }
 
     function handleMem(id) {
-      if (isMemMode) {
-        localStorage.setItem('vfo_m' + id, freq);
-        
-        let relativekHz = (freq - 5500000) / 1000;
-        let displayString = relativekHz.toFixed(3);
-        let parts = displayString.split('.');
-        
-        // SAFE WAY: Pad the saved memory slot safely
-        let leadingDigits = parts[0].padStart(3, '0');
-        
-        document.getElementById('m' + id).innerText = leadingDigits + '.' + parts[1];
-        isMemMode = false;
-        document.getElementById('main-display').classList.remove('mem-active');
-        document.querySelectorAll('.b-mem').forEach(b => b.classList.remove('save-ready'));
-      } else {
-        let saved = localStorage.getItem('vfo_m' + id);
-        if (saved) { 
-          freq = parseInt(saved); 
-          updateUI(); 
-          sendFreq(); 
-        }
-      }
-    }
+  if (isMemMode) {
+    const savedFreq = getCurrentFreq();
+    localStorage.setItem('vfo_m' + id, savedFreq);
+    isMemMode = false;
+    document.getElementById('main-display').classList.remove('mem-active');
+    document.querySelectorAll('.b-mem').forEach(b => b.classList.remove('save-ready'));
+    loadSavedMem();
+    return;
+  }
+
+  const saved = localStorage.getItem('vfo_m' + id);
+  if (!saved) return;
+
+  const value = Number(saved);
+  if (curVfo === 'A') freqA = value;
+  else freqB = value;
+
+  updateUI();
+  sendFreq();
+}
+
 
     function toggleFS() {
       var d = document.documentElement;
@@ -409,17 +494,22 @@ var lastSent = 0;
 
     
    function updateUI() {
-      updateMode();
-      let relativekHz = (freq - 5500000) / 1000;
-      let displayString = relativekHz.toFixed(3);
-      let parts = displayString.split('.');
-      
-      // SAFE WAY: Pad the front digits to 3 spots using built-in padStart
-      let leadingDigits = parts[0].padStart(3, '0');
+  updateMode();
 
-      document.getElementById('f-display').innerText = leadingDigits + '.' + parts[1];
-      document.getElementById('mode-label').innerText = curMode;
-    }
+  const shownFreq = (curVfo === 'A') ? freqA : freqB;
+  const relativekHz = (shownFreq - 5500000) / 1000;
+  const parts = relativekHz.toFixed(3).split('.');
+  const leadingDigits = parts[0].padStart(3, '0');
+  document.getElementById('step-btn').innerText = stepLabels[stepIdx];
+
+  document.getElementById('f-display').innerText =
+    leadingDigits + '.' + parts[1];
+
+  document.getElementById('band-label').innerText = 'VFO ' + curVfo;
+  document.getElementById('vfo-b-frequency').innerText =
+    ((freqB - 5500000) / 1000).toFixed(3);
+}
+
     
     function nextStep() {
       stepIdx = (stepIdx + 1) % steps.length;
@@ -427,56 +517,62 @@ var lastSent = 0;
       document.getElementById('step-label').innerText = stepLabels[stepIdx];
     }    
     
-    function adjustFreq(direction) {
-      // Change frequency by the currently selected step
-      freq += direction * steps[stepIdx];
+    // Example of how adjustFreq must change
+function adjustFreq(direction) {
+  if (curVfo === 'A') {
+    freqA += direction * steps[stepIdx];
+    // Clamp freqA...
+  } else {
+    freqB += direction * steps[stepIdx];
+    // Clamp freqB...
+  }
+  updateUI();
+  sendFreq();
+}
 
-      // Limit the Si5351 range to 5.500 MHz–6.000 MHz
-      if (freq < 5500000) freq = 5500000;
-      if (freq > 6000000) freq = 6000000;
+function sendFreq() {
+  // Update fetch to send ALL state
+  fetch(`/set?fA=${freqA}&fB=${freqB}&vfo=${curVfo}&split=${isSplit}&rit=${isRit}&mode=${curMode}`);
+}
 
-      updateUI();
-      sendFreq();
-    }
-
-
-    function sendFreq() {
-      let now = Date.now();
-      if (now - lastSent > 50) {
-        fetch('/set?f=' + freq + '&mode=' + curMode);
-        lastSent = now;
-      }
-    }
 
     function getAngle(x, y) {
       let r = document.getElementById('knob').getBoundingClientRect();
       return Math.atan2(y - (r.top + r.height/2), x - (r.left + r.width/2)) * 180 / Math.PI;
     }
-       function move(e) {
-      if (!isDrag) return;
-      let ev = e.touches ? e.touches[0] : e;
-      let ang = getAngle(ev.clientX, ev.clientY);
-      let d = ang - lastAngle;
-      if (d > 180) d -= 360; if (d < -180) d += 360;
-      
-      // 1. Calculate what the next frequency would be
-      let nextFreq = freq + (Math.round(d) * (steps[stepIdx] / 10));
-      
-      // 2. Strict clamping limits for the TS-830S EXT VFO window
-      if (nextFreq < 5500000) nextFreq = 5500000; // Hard bottom stop at 000.000
-      if (nextFreq > 6000000) nextFreq = 6000000; // Hard top stop at 500.000
-      
-      // 3. Only rotate the wheel and send data if we are actually within bounds
-      if (nextFreq !== freq) {
-        freq = nextFreq;
-        curRot += d;
-        document.getElementById('knob').style.transform = 'rotate(' + curRot + 'deg)';
-        updateUI();
-        sendFreq();
-      }
-      
-      lastAngle = ang;
+function move(e) {
+  if (!isDrag) return;
+
+  const ev = e.touches ? e.touches[0] : e;
+  const ang = getAngle(ev.clientX, ev.clientY);
+  let d = ang - lastAngle;
+
+  if (d > 180) d -= 360;
+  if (d < -180) d += 360;
+
+  const currentFreq = curVfo === 'A' ? freqA : freqB;
+  let nextFreq = currentFreq + Math.round(d * (steps[stepIdx] / 10));
+
+  nextFreq = Math.max(5500000, Math.min(6000000, nextFreq));
+
+  if (nextFreq !== currentFreq) {
+    if (curVfo === 'A') {
+      freqA = nextFreq;
+    } else {
+      freqB = nextFreq;
     }
+
+    curRot += d;
+    document.getElementById('knob').style.transform =
+      'rotate(' + curRot + 'deg)';
+    updateUI();
+    sendFreq();
+  }
+
+  lastAngle = ang;
+}
+
+
 
     let knob = document.getElementById('knob');
     knob.addEventListener('mousedown', function(e) { isDrag = true; lastAngle = getAngle(e.clientX, e.clientY); });
@@ -494,21 +590,34 @@ var lastSent = 0;
 </body></html>
 )rawliteral";
 
+
+
 //void updateFrequency(unsigned long f) { si5351.set_freq(f * 100ULL, SI5351_CLK0); }
-const unsigned long CW_SSB_THRESHOLD_HZ = 5570000UL;
 
-void updateFrequency(unsigned long f) {
-  uint64_t outputHz = f;
 
-  // Apply the TX offset only below 5.570 MHz, and only while transmitting.
+void updateFrequency() {
+  unsigned long outputHz = freqA; // Default
+
+  if (isRit) {
+    // RIT active: Transmit on A, B used for RIT offset
+    outputHz = freqA; 
+  } else if (isSplit && digitalRead(keySensePin) == LOW) {
+    // Split active & Transmitting: Transmit on B
+    outputHz = freqB;
+  } else {
+    // Normal operation: Output selected VFO
+    //outputHz = (curVfo == 'A') ? freqA : freqB;
+    outputHz = (curVfo == 'A') ? freqA : freqB;
+  }
+
+  // Apply the 800Hz TX offset if in CW mode and transmitting
   if (cwMode && digitalRead(keySensePin) == LOW) {
-  outputHz += txOffsetHz;
+    outputHz += txOffsetHz;
+  }
+
+  si5351.set_freq((uint64_t)outputHz * 100ULL, SI5351_CLK0);
 }
 
-
-  // Etherkit set_freq() expects units of 0.01 Hz.
-  si5351.set_freq(outputHz * 100ULL, SI5351_CLK0);
-}
 
 
 void handleRoot() {
@@ -517,43 +626,51 @@ void handleRoot() {
 }
 
 void handleSet() {
-  if (!server.hasArg("f")) {
-    server.send(400, "text/plain", "Missing frequency");
-    return;
+  if (server.hasArg("fA")) {
+    unsigned long value = server.arg("fA").toInt();
+    if (value >= 5500000UL && value <= 6000000UL) {
+      freqA = value;
+    }
   }
 
-  unsigned long newFrequency = server.arg("f").toInt();
-
-  // Basic safety range: 100 kHz to 30 MHz
-  if (newFrequency < 100000 || newFrequency > 30000000) {
-    server.send(400, "text/plain", "Invalid frequency");
-    return;
+  if (server.hasArg("fB")) {
+    unsigned long value = server.arg("fB").toInt();
+    if (value >= 5500000UL && value <= 6000000UL) {
+      freqB = value;
+    }
   }
 
-  frequency = newFrequency;
+  if (server.hasArg("vfo")) {
+    String vfo = server.arg("vfo");
+    if (vfo == "A" || vfo == "B") {
+      curVfo = vfo[0];
+    }
+  }
+
+  if (server.hasArg("split")) {
+    isSplit = (server.arg("split") == "true");
+  }
+
+  if (server.hasArg("rit")) {
+    isRit = (server.arg("rit") == "true");
+  }
 
   if (server.hasArg("mode")) {
     cwMode = (server.arg("mode") == "CW");
   }
 
-  updateFrequency(frequency);
-
-  Serial.print("Frequency set to: ");
-  Serial.println(frequency);
-
+  updateFrequency();
   server.send(200, "text/plain", "OK");
 }
 
-
 void handleSignal() {
-  // Temporary test value.
-  // Replace with analogRead() after the VFO is stable.
   server.send(200, "text/plain", "0");
 }
+
 void checkKeySense() {
   static int lastState = HIGH;
   static unsigned long lastChange = 0;
-  uint64_t outputHz = frequency;
+
   int state = digitalRead(keySensePin);
 
   if (state != lastState) {
@@ -562,23 +679,9 @@ void checkKeySense() {
   }
 
   if (millis() - lastChange >= 30) {
-    static int appliedState = HIGH;
-
-   if (state == LOW && cwMode) {
-  outputHz += txOffsetHz;
+    updateFrequency();
+  }
 }
-
-
-Serial.printf("Key sense: %s; mode: %s; VFO: %lu Hz; output: %llu Hz\n",
-              state == LOW ? "TX" : "RX",
-              cwMode ? "CW" : "SSB",
-              frequency,
-              outputHz);
-
-      updateFrequency(frequency);
-    }
- }
-
 
 
 void setup() {
@@ -592,10 +695,10 @@ if (!si5351.init(SI5351_CRYSTAL_LOAD_8PF, 0, 0)) {
   Serial.println("Si5351 initialization failed");
 } else {
   Serial.println("Si5351 initialized");
-  si5351.set_correction(3542, SI5351_PLL_INPUT_XO);
+  si5351.set_correction(-220, SI5351_PLL_INPUT_XO);
   si5351.drive_strength(SI5351_CLK0,SI5351_DRIVE_4MA);
   //si5351.set_freq(550000000ULL, SI5351_CLK0);  //5.5mhz
-  updateFrequency(frequency);  // Starts at 5.500 MHz, with no TX offset
+  updateFrequency();  // Starts at 5.500 MHz, with no TX offset
   si5351.output_enable(SI5351_CLK0, 1);
 }
 WiFi.mode(WIFI_STA);
