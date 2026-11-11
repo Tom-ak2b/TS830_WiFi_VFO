@@ -13,13 +13,14 @@ Si5351 si5351;
 
 bool cwMode = true;
 const int keySensePin = 18;
+const int intextPin = 23;
 const int32_t txOffsetHz = 800; 
 unsigned long freqA = 5500000;
 unsigned long freqB = 5500000;
 char curVfo = 'A';
 bool isSplit = false;
 bool isRit = false;
-
+bool externalVfo = false;  // Start on internal VFO
 
 WebServer server(80);
 
@@ -401,6 +402,14 @@ function toggleVfo() {
         <div class="btn b-mem" id="m3" onclick="handleMem(3)">M3</div>
         <div class="btn b-mem" id="m4" onclick="handleMem(4)">M4</div>
       </div>
+        <div class="grid">
+        <div></div>
+        <div></div>
+        <div></div>
+        <button class="btn b-mem" id="intext-btn"
+          onclick="toggleExternalVfo()">INT VFO</button>
+</div>
+
 </div>
         <div class="signature">Si5351 VFO by mircemk</div>
   </div>
@@ -436,6 +445,19 @@ var lastSent = 0;
         }
       }
     }
+    let externalVfo = false;
+
+function updateExternalVfoButton() {
+  const button = document.getElementById('intext-btn');
+  button.innerText = externalVfo ? 'EXT VFO' : 'INT VFO';
+  button.classList.toggle('active', externalVfo);
+}
+
+function toggleExternalVfo() {
+  externalVfo = !externalVfo;
+  updateExternalVfoButton();
+  sendFreq();
+}
 
     function clearAllMem() {
       for(let i=1; i<=4; i++) localStorage.removeItem('vfo_m'+i);
@@ -531,9 +553,9 @@ function adjustFreq(direction) {
 }
 
 function sendFreq() {
-  // Update fetch to send ALL state
-  fetch(`/set?fA=${freqA}&fB=${freqB}&vfo=${curVfo}&split=${isSplit}&rit=${isRit}&mode=${curMode}`);
+  fetch(`/set?fA=${freqA}&fB=${freqB}&vfo=${curVfo}&split=${isSplit}&rit=${isRit}&mode=${curMode}&ext=${externalVfo}`);
 }
+
 
 
     function getAngle(x, y) {
@@ -586,6 +608,7 @@ function move(e) {
 
     loadSavedMem();
     updateUI();
+    updateExternalVfoButton();
   </script>
 </body></html>
 )rawliteral";
@@ -618,7 +641,10 @@ void updateFrequency() {
   si5351.set_freq((uint64_t)outputHz * 100ULL, SI5351_CLK0);
 }
 
-
+void setExternalVfo(bool useExternal) {
+  externalVfo = useExternal;
+  digitalWrite(intextPin, externalVfo ? HIGH : LOW);
+}
 
 void handleRoot() {
   server.send_P(200, "text/html", VFO_HTML);
@@ -631,6 +657,10 @@ void handleSet() {
     if (value >= 5500000UL && value <= 6000000UL) {
       freqA = value;
     }
+    if (server.hasArg("ext")) {
+     setExternalVfo(server.arg("ext") == "true");
+}
+
   }
 
   if (server.hasArg("fB")) {
@@ -688,6 +718,8 @@ void setup() {
   Serial.begin(115200);
   delay(2000);
   pinMode(keySensePin,INPUT_PULLUP);
+  pinMode(intextPin, OUTPUT);
+  setExternalVfo(false);  // Relay off: COM-NC selects internal VFO
   Wire.begin(21, 22);
   Wire.setClock(100000);
 
