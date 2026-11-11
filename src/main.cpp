@@ -21,6 +21,7 @@ char curVfo = 'A';
 bool isSplit = false;
 bool isRit = false;
 bool externalVfo = false;  // Start on internal VFO
+bool si5351Ready = false;
 
 WebServer server(80);
 
@@ -643,8 +644,27 @@ void updateFrequency() {
 
 void setExternalVfo(bool useExternal) {
   externalVfo = useExternal;
-  digitalWrite(intextPin, externalVfo ? HIGH : LOW);
+
+  if (externalVfo) {
+    // Set the signal frequency before enabling the Si5351 output.
+    if (si5351Ready) {
+      updateFrequency();
+      si5351.output_enable(SI5351_CLK0, 1);
+    }
+
+    // Relay selects the external VFO.
+    digitalWrite(intextPin, HIGH);
+  } else {
+    // Stop the Si5351 signal before selecting the radio's internal VFO.
+    if (si5351Ready) {
+      si5351.output_enable(SI5351_CLK0, 0);
+    }
+
+    // Relay selects the internal VFO.
+    digitalWrite(intextPin, LOW);
+  }
 }
+
 
 void handleRoot() {
   server.send_P(200, "text/html", VFO_HTML);
@@ -657,10 +677,6 @@ void handleSet() {
     if (value >= 5500000UL && value <= 6000000UL) {
       freqA = value;
     }
-    if (server.hasArg("ext")) {
-     setExternalVfo(server.arg("ext") == "true");
-}
-
   }
 
   if (server.hasArg("fB")) {
@@ -689,9 +705,15 @@ void handleSet() {
     cwMode = (server.arg("mode") == "CW");
   }
 
+  // Process ext independently of fA.
+  if (server.hasArg("ext")) {
+    setExternalVfo(server.arg("ext") == "true");
+  }
+
   updateFrequency();
   server.send(200, "text/plain", "OK");
-}
+} 
+
 
 void handleSignal() {
   server.send(200, "text/plain", "0");
@@ -730,8 +752,10 @@ if (!si5351.init(SI5351_CRYSTAL_LOAD_8PF, 0, 0)) {
   si5351.set_correction(-220, SI5351_PLL_INPUT_XO);
   si5351.drive_strength(SI5351_CLK0,SI5351_DRIVE_4MA);
   //si5351.set_freq(550000000ULL, SI5351_CLK0);  //5.5mhz
+  si5351Ready = true;
+  si5351.output_enable(SI5351_CLK0, 0);  // Start with CLK0 disabled
   updateFrequency();  // Starts at 5.500 MHz, with no TX offset
-  si5351.output_enable(SI5351_CLK0, 1);
+  setExternalVfo(externalVfo); 
 }
 WiFi.mode(WIFI_STA);
 WiFi.setSleep(false);
