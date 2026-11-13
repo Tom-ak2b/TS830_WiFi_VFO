@@ -1,7 +1,7 @@
 # TS830_WiFi_VFO
 WIFI VFO for the TS-830
 
-![Radio image](Images/http192.168.1.180.png)  ![Radio image](Images/MainVFObd.png)  
+![Radio image](Images/http192.168.1.180.png) 
 
 
 
