@@ -13,6 +13,6 @@ The plug wiring is as shown. The EXT VFO jack on the Ts-830 has a push switch th
 from the shell of the external DIN plug. Wiring just the connector and "trying it out" without the shell will not work since the radio will not 
 know that an external VFO is being used. 
 
-The board I used for this project is ESP-WROOM-32 ESP32 ESP-32S Development Board 2.4GHz Dual-Mode WiFi + Bluetooth Dual Cores Microcontroller Processor Integrated with Antenna RF AMP Filter AP STA Compatible with Arduino IDE (1 PCS) https://a.co/d/02lSffuX
+The board I used for this project is ESP-WROOM-32 https://a.co/d/02lSffuX
 I used a relay board to short the 9 volts from pin 3 to pin 5 that enables or disables the external vfo  https://a.co/d/0h7P99Ec
 I also used an optocoupler on pin 2 to detect the 12 volts thst appears when push-to-talk is enabled https://a.co/d/067ibW73
