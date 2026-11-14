@@ -5,7 +5,7 @@
 
 
 This VFO was built and tested with the Kenwood TS-830 and no other. I cannot verify its use with any other radio.
-The cable and connector were bought from https://www.k4eaa.com/ca-24.htm  All DIN connectors the same! If in doubt, buy this one.
+The cable and connector were bought from https://www.k4eaa.com/ca-24.htm  All DIN connectors are not the same! If in doubt, buy this one.
 
 ![Radio image](Images/VFO_DIN.png) 
 
