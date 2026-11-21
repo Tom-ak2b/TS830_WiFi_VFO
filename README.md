@@ -19,4 +19,6 @@ I used a relay board to short the 9 volts from pin 1 to pin 4 that enables or di
 
 I also used an optocoupler on pin 2 to detect the 12 volts thst appears when push-to-talk is enabled https://a.co/d/067ibW73
 
+The schematic below shows a 7mhz low pass filter followed by a 10db attenuator which should give you a bit more output than the internal vfo but easily usable without any harm.
+
 ![Radio image](Images/WiFivfo_schem.png) 
