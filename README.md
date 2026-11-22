@@ -16,6 +16,7 @@ know that an external VFO is being used.
 The board I used for this project is ESP-WROOM-32 https://a.co/d/02lSffuX
 
 I used a relay board to short the 9 volts from pin 1 to pin 4 that enables or disables the external vfo  https://a.co/d/0h7P99Ec
+This board could be replaced with a simple toggle switch to go from Internal (closed) to External VFO (open)
 
 I also used an optocoupler on pin 2 to detect the 12 volts thst appears when push-to-talk is enabled https://a.co/d/067ibW73
 
