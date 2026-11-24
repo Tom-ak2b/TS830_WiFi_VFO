@@ -22,4 +22,17 @@ I also used an optocoupler on pin 2 to detect the 12 volts thst appears when pus
 
 The schematic below shows a 7mhz low pass filter followed by a 10db attenuator which should give you a bit more output than the internal vfo but easily usable without any harm.
 
+A few notes on the operation:
+Tuning can be done with the Dial or more accurately with the up and down arrows. Holding down either the up or down arrow will tune continuously.
+tapping the button in between the two arrows will change the tuning rate from 10, 100 or 1Khz.
+When you find a frequency you wish to store into memory tap in the center of the frequency dial (it will turn yellow) then tap a memory button to store it.
+Tapping the left side of the frequency display will toggle between full screen and not full screen.
+CW/SSB button toggles between the two modes. CW provides an 800hz offset as does the internal vfo. SSB does not use an offset.
+To work split tune to the receive frequency with VFO A. Tap VFO A and you will see in the upper left corner of the display that it will change to VFO B.
+which will become your transmit frequency. Using the 1Khz tuning step you can easily change your tranmsit frequency. Once done press SPLIT and press VFO B. 
+Make sure you are using the correct mode since CW mode will add another 800hz to your transmit frequency
+
 ![Radio image](Images/WiFivfo_schem.png) 
+
+This project was inspired by Mirko Pavleski
+https://youtu.be/y8KVNp53JAg?si=wVZY4mSoWvHc5Hr7
