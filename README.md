@@ -27,7 +27,7 @@ The schematic below shows a 7mhz low pass filter followed by a 10db attenuator w
 
 A few notes on the operation:
 Tuning can be done with the Dial or more accurately with the up and down arrows. Holding down either the up or down arrow will tune continuously.
-tapping the button in between the two arrows will change the tuning rate from 10, 100 or 1Khz.
+Tapping the button in between the two arrows will change the tuning rate from 10, 100 or 1Khz.
 When you find a frequency you wish to store into memory tap in the center of the frequency dial (it will turn yellow) then tap a memory button to store it.
 Tapping the left side of the frequency display will toggle between full screen and not full screen.
 CW/SSB button toggles between the two modes. CW provides an 800hz offset as does the internal vfo. SSB does not use an offset.
