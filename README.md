@@ -2,7 +2,7 @@
 
 ![Radio image](Images/TS-830_scrn.png) 
 
-This is not a an APP per se. It is a web page produced by esp32 code and will run anywhere you can open a browser.
+This is not a an APP per se. It is a web page produced by esp32 code and will run anywhere you can open a browser; your phone, tablet or computer.
 The box containing the hardware can be left on and plugged into the EXT VFO jack of your TS-830 and can be switched easily with software or a toggle switch. The enclosure must at least expose the wifi antenna on the esp32. Frequency accuracy will improve if you properly calibrate the Si5351.
 
 The usefulness of having a wifi VFO may be questioned and other than occasionally using split frequency and having a few memories I can’t answer that question. I will say that I like having my coffee in the morning while watching [trains](https://www.youtube.com/live/L6eG4ahJc_Q?is=0sKbtO32eBdH9FX1) on YouTube and listening to the 40 meter nets. I use a [bluetooth transmitter](https://www.amazon.com/dp/B07TLHRPDP?ref=ppx_pop_mob_ap_share) plugged into the headphone jack and a small bluetooth speaker I take with me to the living room. And I have worked split with it a time or two.
