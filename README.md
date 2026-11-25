@@ -9,7 +9,7 @@ The cable and connector were bought from https://www.k4eaa.com/ca-24.htm  All DI
 
 ![Radio image](Images/VFO_DIN.png) 
 
-The plug wiring is as shown. The EXT VFO jack on the Ts-830 has a push switch that disconnects pin 4 from pin 1 when activated
+The plug wiring is as shown. The EXT VFO jack on the TS-830 has a push switch that disconnects pin 4 from pin 1 when activated
 from the shell of the external DIN plug. Wiring just the connector and "trying it out" without the shell will not work since the radio will not 
 know that an external VFO is being used. 
 
