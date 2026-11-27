@@ -36,7 +36,9 @@ const char VFO_HTML[] PROGMEM = R"rawliteral(
     --lcd-bg: #0077c2;        
     --btn-step: #27ae60;      
     --btn-mode: #2980b9;      
-    --btn-mem: #8e44ad;       
+    --btn-mem: #8e44ad; 
+    --btn-ext: #2c3e50;
+    --btn-ext-active: #c0392b;      
     --gold-border: #f1c40f;   
     --text-color: #ecf0f1;    
   }
@@ -154,7 +156,8 @@ const char VFO_HTML[] PROGMEM = R"rawliteral(
   .b-step { background: var(--btn-step); font-size: 20px; padding: 12px; grid-column: span 4; }
  
   .b-mem { background: var(--btn-mem); border-color: #555; font-size: 13px; }
-   
+  .b-ext { background: var(--btn-ext); border-color: #555; font-size: 13px; }
+  .b-ext.active { background: var(--btn-ext-active); border-color: var(--gold-border); }   
 
   .b-freq {
     background: var(--inner-bezel);
@@ -403,13 +406,14 @@ function toggleVfo() {
         <div class="btn b-mem" id="m3" onclick="handleMem(3)">M3</div>
         <div class="btn b-mem" id="m4" onclick="handleMem(4)">M4</div>
       </div>
-        <div class="grid">
-        <div></div>
-        <div></div>
-        <div></div>
-        <button class="btn b-mem" id="intext-btn"
+            
+      <div class="grid">
+        <div class="btn b-mem" id="m5" onclick="handleMem(5)">M5</div>
+        <div class="btn b-mem" id="m6" onclick="handleMem(6)">M6</div>
+        <div class="btn b-mem" id="m7" onclick="handleMem(7)">M7</div>
+        <button class="btn b-ext" id="intext-btn"
           onclick="toggleExternalVfo()">INT VFO</button>
-</div>
+      </div>
 
 </div>
         <div class="signature">Si5351 VFO by mircemk</div>
@@ -430,7 +434,7 @@ var lastSent = 0;
     var isMemMode = false;
 
     function loadSavedMem() {
-      for (let i = 1; i <= 4; i++) {
+      for (let i = 1; i <= 7; i++) {
         let saved = localStorage.getItem('vfo_m' + i);
         if (saved) {
           let relativekHz = (parseInt(saved) - 5500000) / 1000;
@@ -461,7 +465,7 @@ function toggleExternalVfo() {
 }
 
     function clearAllMem() {
-      for(let i=1; i<=4; i++) localStorage.removeItem('vfo_m'+i);
+      for(let i=1; i<=7; i++) localStorage.removeItem('vfo_m'+i);
       loadSavedMem();
       let d = document.getElementById('main-display');
       d.classList.add('reset-flash');
@@ -789,3 +793,4 @@ void loop() {
   checkKeySense();
   delay(1);
 }
+
