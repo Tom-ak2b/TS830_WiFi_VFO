@@ -1,6 +1,6 @@
 # TS830_WiFi_VFO
 
-![Radio image](Images/TS-830_scrn.png) 
+![Radio image](Images/VFO7mem.png) 
 
 This is not a an APP per se. It is a web page produced by esp32 code and will run anywhere you can open a browser; your phone, tablet or computer.
 The box containing the hardware can be left on and plugged into the EXT VFO jack of your TS-830 and can be switched easily with software or a toggle switch. The enclosure must at least expose the wifi antenna on the esp32. Frequency accuracy will improve if you properly calibrate the Si5351.
